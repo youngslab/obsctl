@@ -1,0 +1,8 @@
+.git
+.gitignore
+.omc/
+*.md
+!README.md
+vault/
+onedrive-conf/
+.env

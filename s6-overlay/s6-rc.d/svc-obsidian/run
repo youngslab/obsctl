@@ -1,0 +1,2 @@
+#!/command/with-contenv sh
+exec gosu obsidian /opt/obsidian/obsidian --no-sandbox --disable-gpu

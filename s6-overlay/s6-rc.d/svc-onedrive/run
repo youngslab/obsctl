@@ -1,0 +1,13 @@
+#!/command/with-contenv sh
+
+CONFDIR="/onedrive-conf"
+SYNCDIR="/vault"
+
+# Ensure minimal config exists with backup to prevent --resync demands
+if [ ! -f "$CONFDIR/config" ]; then
+    touch "$CONFDIR/config"
+fi
+cp -f "$CONFDIR/config" "$CONFDIR/config.backup"
+
+# Auto-confirm resync if needed, then start monitor mode
+exec gosu obsidian sh -c "echo Y | onedrive --monitor --confdir $CONFDIR --syncdir $SYNCDIR --monitor-interval 600 --skip-dot-files --skip-symlinks --resync"

@@ -1,0 +1,5 @@
+# OneDrive sync_list -- controls which remote folders to sync
+# Only folders listed here will be synced to /vault
+# See: https://github.com/abraunegg/onedrive/blob/master/docs/USAGE.md#sync_list
+
+/Documents/Obsidian

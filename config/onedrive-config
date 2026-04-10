@@ -1,0 +1,14 @@
+# OneDrive client configuration
+# See: https://github.com/abraunegg/onedrive/blob/master/docs/USAGE.md
+
+# NOTE: sync_dir is set via --syncdir=/vault CLI flag in the s6 service.
+# Do not set sync_dir here to avoid conflicts with the CLI flag.
+
+# Monitor interval in seconds (how often to check for remote changes)
+# Set to 600 (10 minutes) to reduce API calls and mitigate
+# race conditions with Obsidian writing to the same files.
+monitor_interval = "600"
+
+# Skip dot-files and symlinks
+skip_dotfiles = "true"
+skip_symlinks = "true"

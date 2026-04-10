@@ -1,0 +1,2 @@
+#!/command/with-contenv sh
+exec Xvfb :99 -screen 0 1024x768x24 -nolisten tcp

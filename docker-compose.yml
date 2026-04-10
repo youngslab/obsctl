@@ -1,0 +1,17 @@
+services:
+  obsidian-sync:
+    build: .
+    container_name: obsidian-sync
+    volumes:
+      - ./vault:/vault
+      - ./onedrive-conf:/onedrive-conf
+      - obsidian-config:/home/obsidian/.config/obsidian
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - VAULT_NAME=${VAULT_NAME:-MyVault}
+      - ONEDRIVE_AUTHRESPONSE=${ONEDRIVE_AUTHRESPONSE:-}
+    restart: unless-stopped
+
+volumes:
+  obsidian-config:
