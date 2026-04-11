@@ -201,7 +201,7 @@ obsidian orphans
 - The `obsidian` CLI requires a running Obsidian Electron process (headless via Xvfb in this container)
 - Commands are IPC-based; there is no concurrent write safety for the same file
 - Some commands may require the vault to be fully indexed first (initial startup may take time)
-- The CLI requires an Obsidian Catalyst license ($25 one-time)
+- Obsidian 1.12.4+ required (CLI is free for all users since Feb 2026)
 
 ## Command Verification Note
 

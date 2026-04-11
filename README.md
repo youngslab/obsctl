@@ -5,7 +5,7 @@ Docker container running headless Obsidian CLI + OneDrive sync. Enables Claude C
 ## Prerequisites
 
 - Docker and Docker Compose
-- [Obsidian Catalyst license](https://obsidian.md/pricing) ($25 one-time) for CLI access
+- Obsidian 1.12.4+ (CLI is free for all users since Feb 2026)
 - Microsoft OneDrive account
 
 ## Quick Start
@@ -212,4 +212,4 @@ echo "PGID=$(id -g)" >> .env
 
 ## License
 
-This project provides Docker configuration for running Obsidian and the OneDrive Linux client. Obsidian requires a [Catalyst license](https://obsidian.md/pricing) for CLI access. OneDrive client is [GPL-3.0](https://github.com/abraunegg/onedrive/blob/master/LICENSE).
+This project provides Docker configuration for running Obsidian and the OneDrive Linux client. Obsidian CLI is free for all users since v1.12.4. OneDrive client is [GPL-3.0](https://github.com/abraunegg/onedrive/blob/master/LICENSE).
