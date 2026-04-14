@@ -1,0 +1,246 @@
+#!/usr/bin/env bash
+# obsctl - Obsidian vault control tool
+# Usage: obsctl <command> [args...]
+
+set -euo pipefail
+
+# Configuration
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/obsctl"
+CONFIG_FILE="$CONFIG_DIR/config.json"
+
+# Defaults (overridable by config.json or env vars)
+CONTAINER="${OBS_CONTAINER:-obsctl}"
+VAULT_PREFIX="${OBS_VAULT_PREFIX:-Documents/Obsidian}"
+OBSIDIAN_USER="${OBS_USER:-obsidian}"
+
+# Load config if exists
+if [[ -f "$CONFIG_FILE" ]]; then
+    _cfg_container=$(grep -o '"container"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*: *"//;s/"//')
+    _cfg_prefix=$(grep -o '"vaultPrefix"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*: *"//;s/"//')
+    _cfg_user=$(grep -o '"user"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*: *"//;s/"//')
+    [[ -n "${_cfg_container:-}" ]] && CONTAINER="${OBS_CONTAINER:-$_cfg_container}"
+    [[ -n "${_cfg_prefix:-}" ]] && VAULT_PREFIX="${OBS_VAULT_PREFIX:-$_cfg_prefix}"
+    [[ -n "${_cfg_user:-}" ]] && OBSIDIAN_USER="${OBS_USER:-$_cfg_user}"
+fi
+
+# --- Path resolution ---
+# path=, folder=, to= → auto-prefix with VAULT_PREFIX
+# file=, name=, query= → pass through (wikilink resolution)
+resolve_arg() {
+    local arg="$1"
+    case "$arg" in
+        path=*|folder=*|to=*)
+            local key="${arg%%=*}"
+            local val="${arg#*=}"
+            # Strip surrounding quotes if present
+            val="${val%\"}"
+            val="${val#\"}"
+            if [[ "$val" != "$VAULT_PREFIX"* ]]; then
+                val="$VAULT_PREFIX/$val"
+            fi
+            echo "${key}=\"${val}\""
+            ;;
+        file=*|name=*|query=*|content=*|limit=*|format=*|line=*|sort=*)
+            echo "$arg"
+            ;;
+        *)
+            echo "$arg"
+            ;;
+    esac
+}
+
+# --- Shorthand expansion (sets CMD and ARGS array) ---
+expand_command() {
+    case "$1" in
+        ls)       CMD="files" ;;
+        mv)       CMD="move" ;;
+        rm)       CMD="delete" ;;
+        props)    CMD="properties" ;;
+        today)    CMD="daily:read" ;;
+        today:add)CMD="daily:append" ;;
+        search)   CMD="search:context" ;;
+        tags)     CMD="tags"; EXTRA_ARGS=("counts" "sort=count") ;;
+        *)        CMD="$1" ;;
+    esac
+}
+
+# --- Bare argument heuristic ---
+# If a bare arg (no key=) contains /, treat as path and prefix
+# If no /, leave as-is (wikilink name resolution)
+resolve_bare_arg() {
+    local cmd="$1"
+    local arg="$2"
+    # Skip if already a key=value pair
+    [[ "$arg" == *=* ]] && { echo "$arg"; return; }
+    # Skip flags
+    [[ "$arg" == -* ]] && { echo "$arg"; return; }
+
+    case "$cmd" in
+        read|outline|delete|properties)
+            if [[ "$arg" == */* ]]; then
+                echo "path=\"$VAULT_PREFIX/$arg\""
+            else
+                echo "file=\"$arg\""
+            fi
+            ;;
+        files|folders)
+            if [[ "$arg" == */* ]] || [[ -z "$arg" ]]; then
+                echo "folder=\"$VAULT_PREFIX/$arg\""
+            else
+                echo "folder=\"$VAULT_PREFIX/$arg\""
+            fi
+            ;;
+        search|search:context)
+            echo "query=\"$arg\""
+            ;;
+        move)
+            if [[ "$arg" == */* ]]; then
+                echo "\"$VAULT_PREFIX/$arg\""
+            else
+                echo "\"$arg\""
+            fi
+            ;;
+        *)
+            echo "\"$arg\""
+            ;;
+    esac
+}
+
+# --- Container check ---
+check_container() {
+    if ! docker inspect "$CONTAINER" &>/dev/null; then
+        echo "Error: Container '$CONTAINER' not found." >&2
+        echo "Run 'obsctl setup' to configure." >&2
+        exit 1
+    fi
+    if [[ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" != "true" ]]; then
+        echo "Error: Container '$CONTAINER' is not running." >&2
+        echo "Run: docker compose up -d" >&2
+        exit 1
+    fi
+}
+
+# --- Execute obsidian CLI command ---
+exec_obsidian() {
+    docker exec -u "$OBSIDIAN_USER" "$CONTAINER" \
+        obsidian --no-sandbox "$@" 2>/dev/null
+}
+
+# --- Built-in commands ---
+
+do_setup() {
+    echo "obsctl setup — not yet implemented"
+    echo "Run 'obsctl help' for usage."
+    exit 1
+}
+
+do_status() {
+    check_container
+
+    local container_status
+    container_status=$(docker inspect -f '{{.State.Status}}' "$CONTAINER" 2>/dev/null)
+    local container_health
+    container_health=$(docker inspect -f '{{.State.Health.Status}}' "$CONTAINER" 2>/dev/null || echo "unknown")
+    local uptime
+    uptime=$(docker inspect -f '{{.State.StartedAt}}' "$CONTAINER" 2>/dev/null | cut -dT -f1)
+
+    echo "Container:  $CONTAINER ($container_health, since $uptime)"
+
+    local vault_info
+    vault_info=$(exec_obsidian vault 2>/dev/null) || true
+    if [[ -n "$vault_info" ]]; then
+        local files folders
+        files=$(echo "$vault_info" | grep "^files" | awk '{print $2}')
+        folders=$(echo "$vault_info" | grep "^folders" | awk '{print $2}')
+        echo "Obsidian:   CLI active ($files files, $folders folders)"
+    else
+        echo "Obsidian:   CLI not responding"
+    fi
+
+    local onedrive_pid
+    onedrive_pid=$(docker exec "$CONTAINER" pgrep -f "onedrive.*monitor" 2>/dev/null || true)
+    if [[ -n "$onedrive_pid" ]]; then
+        echo "OneDrive:   syncing (pid $onedrive_pid)"
+    else
+        echo "OneDrive:   not running"
+    fi
+
+    echo "Config:     $CONFIG_FILE"
+}
+
+do_help() {
+    cat <<'HELP'
+obsctl - Obsidian vault control tool
+
+Usage: obsctl <command> [args...]
+
+Commands:
+  setup                 Configure Docker, OneDrive, and vault
+  status                Show environment health
+  vault                 Vault info
+  read <note>           Read a note (path or wikilink name)
+  search <query>        Full-text search with context
+  ls [folder]           List files in folder
+  create <name>         Create a note
+  mv <src> <dst>        Move/rename a note
+  rm <note>             Delete a note (trash)
+  props <note>          Show frontmatter properties
+  prop:set <args>       Set a frontmatter property
+  prop:get <args>       Read a frontmatter property
+  today                 Read today's daily note
+  today:add <text>      Append to today's daily note
+  tags                  List all tags with counts
+  backlinks <note>      Show incoming links
+  unresolved            Find broken links
+  outline <note>        Show heading outline
+  help                  Show this help
+
+Path resolution:
+  Contains /  → vault path (auto-prefixed with Documents/Obsidian/)
+  No /        → wikilink name resolution (no prefix)
+
+Environment:
+  OBS_CONTAINER     Container name (default: obsctl)
+  OBS_VAULT_PREFIX  Vault path prefix (default: Documents/Obsidian)
+  OBS_USER          Docker exec user (default: obsidian)
+
+Config: ~/.config/obsctl/config.json
+HELP
+}
+
+# --- Main ---
+
+if [[ $# -eq 0 ]]; then
+    do_help
+    exit 0
+fi
+
+# Handle built-in commands first
+case "$1" in
+    setup)  do_setup ;;
+    status) do_status; exit $? ;;
+    help)   do_help; exit 0 ;;
+esac
+
+# Expand shorthands (sets CMD, may set EXTRA_ARGS)
+CMD=""
+EXTRA_ARGS=()
+expand_command "$1"
+shift
+args=("$@" "${EXTRA_ARGS[@]}")
+
+# Check container for obsidian CLI commands
+check_container
+
+# Resolve arguments
+resolved_args=()
+for arg in "${args[@]}"; do
+    if [[ "$arg" == *=* ]]; then
+        resolved_args+=("$(resolve_arg "$arg")")
+    else
+        resolved_args+=("$(resolve_bare_arg "$CMD" "$arg")")
+    fi
+done
+
+# Execute
+eval exec_obsidian "$CMD" "${resolved_args[@]}"

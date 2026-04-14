@@ -1,4 +1,4 @@
-# obsidian-sync
+# obsctl
 
 Docker container running headless Obsidian CLI + OneDrive sync. Enables Claude Code (and other AI agents) to interact with an Obsidian vault via CLI, with bidirectional OneDrive synchronization.
 
@@ -12,7 +12,7 @@ Docker container running headless Obsidian CLI + OneDrive sync. Enables Claude C
 
 ```bash
 # 1. Clone the repository
-git clone <repo-url> && cd obsidian-sync
+git clone <repo-url> && cd obsctl
 
 # 2. Create required directories
 mkdir -p vault onedrive-conf
@@ -43,7 +43,7 @@ You must authenticate with OneDrive before the container can sync. Choose one op
 docker compose build
 
 # Run OneDrive auth interactively
-docker compose run --rm obsidian-sync \
+docker compose run --rm obsctl \
     onedrive --confdir=/onedrive-conf --auth-uri
 
 # 1. Copy the URL printed to the terminal
@@ -164,10 +164,10 @@ The container includes a health check that verifies:
 docker compose ps
 
 # Run healthcheck manually
-docker compose exec obsidian-sync /scripts/healthcheck.sh
+docker compose exec obsctl /scripts/healthcheck.sh
 
 # View service status (s6)
-docker compose exec obsidian-sync s6-rc -a list
+docker compose exec obsctl s6-rc -a list
 ```
 
 ## Troubleshooting
@@ -176,7 +176,7 @@ docker compose exec obsidian-sync s6-rc -a list
 The refresh_token auto-renews. If it expires:
 ```bash
 docker compose down
-docker compose run --rm obsidian-sync onedrive --confdir=/onedrive-conf --auth-uri
+docker compose run --rm obsctl onedrive --confdir=/onedrive-conf --auth-uri
 docker compose up -d
 ```
 

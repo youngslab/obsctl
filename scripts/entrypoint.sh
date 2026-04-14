@@ -21,7 +21,7 @@ fi
 # Skip validation if running a manual onedrive command (e.g., auth)
 if [ ! -f /onedrive-conf/refresh_token ] && [ -z "${ONEDRIVE_AUTHRESPONSE:-}" ]; then
     echo "[init-config] WARNING: No OneDrive credentials found."
-    echo "  Run: docker compose run --rm obsidian-sync onedrive --confdir=/onedrive-conf --syncdir=/vault --synchronize --single-directory ''"
+    echo "  Run: docker compose run --rm obsctl onedrive --confdir=/onedrive-conf --syncdir=/vault --synchronize --single-directory ''"
     echo "  to perform first-time authentication."
     echo "  Or set ONEDRIVE_AUTHRESPONSE environment variable."
     # Don't exit -- allow container to start for manual auth

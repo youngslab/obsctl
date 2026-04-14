@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Healthcheck for obsidian-sync container
+# Healthcheck for obsctl container
 # Checks: Obsidian CLI responsiveness, OneDrive process, vault accessibility
 
 ERRORS=0

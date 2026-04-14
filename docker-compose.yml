@@ -1,7 +1,7 @@
 services:
-  obsidian-sync:
+  obsctl:
     build: .
-    container_name: obsidian-sync
+    container_name: obsctl
     volumes:
       - ./vault:/vault
       - ./onedrive-conf:/onedrive-conf
