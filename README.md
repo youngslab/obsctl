@@ -97,7 +97,7 @@ Located in `./onedrive-conf/`:
 | `refresh_token` | OAuth refresh token. Auto-created after authentication. |
 | `items.sqlite3` | Sync state database. Auto-created by OneDrive client. |
 
-Default `sync_list` syncs only the `/Obsidian/` folder from OneDrive. Edit this file to change which folders are synced.
+Default `sync_list` syncs only the `/Documents/Obsidian` folder from OneDrive. Edit this file to change which folders are synced.
 
 Default `config` sets `monitor_interval = 600` (10 minutes) to reduce API calls and mitigate file conflicts.
 
