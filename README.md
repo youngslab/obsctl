@@ -93,7 +93,7 @@ Located in `./onedrive-conf/`:
 | File | Purpose |
 |------|---------|
 | `config` | Sync settings (monitor interval, skip patterns). Auto-created with defaults if missing. |
-| `sync_list` | Which OneDrive folders to sync. Defaults to `/Obsidian/`. |
+| `sync_list` | Which OneDrive folders to sync. Defaults to `/Documents/Obsidian`. |
 | `refresh_token` | OAuth refresh token. Auto-created after authentication. |
 | `items.sqlite3` | Sync state database. Auto-created by OneDrive client. |
 
@@ -143,14 +143,105 @@ Default `config` sets `monitor_interval = 600` (10 minutes) to reduce API calls 
 - `svc-obsidian` starts after svc-xvfb (needs display)
 - `svc-onedrive` starts after init-config (independent of Obsidian)
 
+## Using obsctl CLI
+
+Once the container is running, use the `obsctl` CLI wrapper to interact with the vault from the host:
+
+```bash
+# Vault info
+obsctl vault
+
+# Read a note (by wikilink name — no path prefix needed)
+obsctl read "My Note"
+
+# Read a note (by path — auto-prefixes Documents/Obsidian/)
+obsctl read sonatus/NSS/foo.md
+
+# Search
+obsctl search "keyword"
+
+# List files in a folder
+obsctl ls sonatus/NSS
+
+# Create a note
+obsctl create name="New Note" content="# Title"
+
+# Move/rename a note
+obsctl mv old-path/note.md new-path/note.md
+
+# Show frontmatter properties
+obsctl props sonatus/NSS/foo.md
+
+# Set a property
+obsctl prop:set name="status" value="done" path=sonatus/NSS/foo.md
+
+# Today's daily note
+obsctl today
+
+# Environment health
+obsctl status
+```
+
+**Path resolution:**
+- Argument contains `/` → treated as path, auto-prefixed with `Documents/Obsidian/`
+- No `/` → treated as note name (wikilink resolution, no prefix)
+- `path=`, `folder=`, `to=` parameters → always auto-prefixed
+- `file=`, `name=`, `query=` parameters → never prefixed
+
+**Installation:**
+```bash
+# Add to PATH (from repo)
+ln -s $(pwd)/bin/obsctl ~/.local/bin/obsctl
+
+# Or use directly
+./bin/obsctl vault
+```
+
+**Configuration (optional):**
+Settings are read from `~/.config/obsctl/config.json`:
+```json
+{
+  "vault": "/path/to/vault",
+  "vaultPrefix": "Documents/Obsidian",
+  "container": "obsctl",
+  "user": "obsidian"
+}
+```
+
+Environment variables override config: `OBS_CONTAINER`, `OBS_VAULT_PREFIX`, `OBS_USER`.
+
+Run `obsctl help` for all available commands.
+
+### CLI Troubleshooting
+
+```bash
+# Verify Obsidian process is running
+docker exec obsctl ps aux | grep obsidian
+
+# Check CLI socket exists
+docker exec obsctl ls -la /home/obsidian/.obsidian-cli.sock
+
+# Re-register CLI binary if needed
+docker exec -u obsidian obsctl bash -c \
+  'mkdir -p ~/.local/bin && cp /opt/obsidian/obsidian-cli ~/.local/bin/obsidian && chmod +x ~/.local/bin/obsidian'
+
+# Restart Obsidian service
+docker exec obsctl /package/admin/s6-2.13.1.0/command/s6-svc -r /run/service/svc-obsidian
+```
+
+**Important:** The underlying `docker exec` must use `-u obsidian`. Running as root connects to a different IPC socket and fails. The `obsctl` wrapper handles this automatically.
+
 ## Using with Claude Code
 
-The container automatically places a `CLAUDE.md` at the vault root on first start. This file teaches Claude Code instances how to use the `obsidian` CLI to search, read, create, and modify notes.
+Open Claude Code in the project directory. Claude can use `obsctl` directly:
 
-To use:
-1. Point Claude Code at the vault directory
-2. Claude reads `CLAUDE.md` and understands available CLI commands
-3. Claude can search, read, create, and modify notes via the CLI
+```bash
+obsctl read "My Note"
+obsctl search "keyword"
+obsctl ls projects/
+```
+
+The container also places a `CLAUDE.md` at the vault root with CLI documentation.
 
 ## Health Checks
 
