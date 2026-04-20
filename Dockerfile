@@ -54,6 +54,7 @@ RUN wget -q "https://github.com/obsidianmd/obsidian-releases/releases/download/v
     && mv /tmp/squashfs-root /opt/obsidian \
     && chmod -R o+rX /opt/obsidian \
     && ln -s /opt/obsidian/obsidian /usr/local/bin/obsidian \
+    && ln -s /opt/obsidian/obsidian-cli /usr/local/bin/obsidian-cli \
     && rm -f /tmp/obsidian.AppImage
 
 # ---- OneDrive client (copied from official Docker image) ----

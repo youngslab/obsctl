@@ -121,9 +121,13 @@ check_container() {
 }
 
 # --- Execute obsidian CLI command ---
+# Uses the native obsidian-cli binary (introduced in Obsidian 1.12.7)
+# The Electron app (obsidian --no-sandbox) has a silent-failure bug on
+# large vaults for search/tags. See:
+#   https://forum.obsidian.md/t/search-cli-returns-nothing-with-large-vault-not-even-no-results/112519
 exec_obsidian() {
     docker exec -u "$OBSIDIAN_USER" "$CONTAINER" \
-        obsidian --no-sandbox "$@" 2>/dev/null
+        /opt/obsidian/obsidian-cli "$@" 2>/dev/null
 }
 
 # --- Built-in commands ---

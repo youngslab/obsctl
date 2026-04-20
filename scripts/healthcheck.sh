@@ -6,13 +6,8 @@
 ERRORS=0
 
 # ---- Check 1: Obsidian CLI readiness ----
-# Try obsidian vault first (confirms CLI + vault registration)
-# Fall back to obsidian help (confirms CLI binary works)
-if gosu obsidian /opt/obsidian/obsidian --no-sandbox vault >/dev/null 2>&1; then
-    : # CLI responsive with vault command
-elif gosu obsidian /opt/obsidian/obsidian --no-sandbox help >/dev/null 2>&1; then
-    : # CLI binary works but vault command may not exist
-else
+# Uses native obsidian-cli (talks via socket to running Electron instance)
+if ! gosu obsidian /opt/obsidian/obsidian-cli vault >/dev/null 2>&1; then
     echo "UNHEALTHY: Obsidian CLI not responding"
     ERRORS=$((ERRORS + 1))
 fi
