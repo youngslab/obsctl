@@ -204,28 +204,46 @@ do_setup() {
         echo "  ✓ .env exists"
     fi
 
-    # Update vault mount if different from default
-    # (vault path is controlled by docker-compose volume mount)
+    # Build image (needed for auth step)
+    echo "  → Building image..."
+    (cd "$compose_dir" && docker compose build 2>&1) || {
+        echo "  ✗ Failed to build image"
+        exit 1
+    }
+    echo "  ✓ Image built"
 
-    if docker inspect "$CONTAINER" &>/dev/null; then
-        if [[ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" == "true" ]]; then
-            echo "  ✓ Container '$CONTAINER' already running"
-        else
-            echo "  → Starting container..."
-            (cd "$compose_dir" && docker compose up -d 2>&1) || {
-                echo "  ✗ Failed to start container"
-                exit 1
-            }
-            echo "  ✓ Container started"
-        fi
+    # --- Step 5: OneDrive authentication (BEFORE starting container) ---
+    echo ""
+    echo "[5/6] OneDrive Authentication"
+    local onedrive_conf="$compose_dir/onedrive-conf"
+    mkdir -p "$onedrive_conf"
+
+    if [[ -f "$onedrive_conf/refresh_token" ]]; then
+        echo "  ✓ Already authenticated (refresh_token exists)"
     else
-        echo "  → Building and starting container..."
-        (cd "$compose_dir" && docker compose up -d --build 2>&1) || {
-            echo "  ✗ Failed to build/start container"
+        echo "  → Starting OneDrive authentication..."
+        echo "  A URL will appear below. Open it in your browser,"
+        echo "  sign in, then paste the redirect URI back here."
+        echo ""
+        (cd "$compose_dir" && docker compose run --rm --entrypoint "" obsctl \
+            gosu obsidian onedrive --confdir=/onedrive-conf --synchronize --single-directory '')
+
+        if [[ -f "$onedrive_conf/refresh_token" ]]; then
+            echo "  ✓ Authentication successful"
+        else
+            echo "  ✗ Authentication failed. Please try again."
             exit 1
-        }
-        echo "  ✓ Container built and started"
+        fi
     fi
+
+    # --- Start container (after auth is ready) ---
+    echo ""
+    echo "  → Starting container..."
+    (cd "$compose_dir" && docker compose up -d 2>&1) || {
+        echo "  ✗ Failed to start container"
+        exit 1
+    }
+    echo "  ✓ Container started"
 
     # Wait for healthy
     echo "  → Waiting for container to be healthy..."
@@ -244,35 +262,6 @@ do_setup() {
         echo "  ✗ Container did not become healthy in 60s"
         echo "    Check: docker compose logs"
         exit 1
-    fi
-
-    # --- Step 5: OneDrive authentication ---
-    echo ""
-    echo "[5/6] OneDrive Authentication"
-    local onedrive_conf="$compose_dir/onedrive-conf"
-    mkdir -p "$onedrive_conf"
-
-    if [[ -f "$onedrive_conf/refresh_token" ]]; then
-        echo "  ✓ Already authenticated (refresh_token exists)"
-    else
-        echo "  → OneDrive authentication required."
-        echo ""
-        echo "  Run this command in another terminal:"
-        echo ""
-        echo "    docker compose run --rm obsctl onedrive --confdir=/onedrive-conf --auth-uri"
-        echo ""
-        echo "  1. Copy the URL printed and open it in your browser"
-        echo "  2. Sign in with your Microsoft account"
-        echo "  3. Paste the redirect URI back into that terminal"
-        echo ""
-        read -rp "  Press Enter after authentication is complete..."
-
-        if [[ -f "$onedrive_conf/refresh_token" ]]; then
-            echo "  ✓ Authentication successful"
-        else
-            echo "  ⚠ refresh_token not found. You may need to restart the container."
-            echo "    Run: docker compose restart"
-        fi
     fi
 
     # Write sync_list if not exists

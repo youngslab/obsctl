@@ -5,10 +5,11 @@
 
 ERRORS=0
 
-# ---- Check 1: Obsidian CLI readiness ----
-# Uses native obsidian-cli (talks via socket to running Electron instance)
-if ! gosu obsidian /opt/obsidian/obsidian-cli vault >/dev/null 2>&1; then
-    echo "UNHEALTHY: Obsidian CLI not responding"
+# ---- Check 1: Obsidian process running ----
+# Note: obsidian-cli hangs indefinitely in headless Xvfb environments
+# (socket connection to Electron never completes), so we check the process instead
+if ! pgrep -f "/opt/obsidian/obsidian" >/dev/null 2>&1; then
+    echo "UNHEALTHY: Obsidian process not running"
     ERRORS=$((ERRORS + 1))
 fi
 

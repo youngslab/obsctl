@@ -43,8 +43,8 @@ You must authenticate with OneDrive before the container can sync. Choose one op
 docker compose build
 
 # Run OneDrive auth interactively
-docker compose run --rm obsctl \
-    onedrive --confdir=/onedrive-conf --auth-uri
+docker compose run --rm --entrypoint "" obsctl \
+    gosu obsidian onedrive --confdir=/onedrive-conf --synchronize --single-directory ''
 
 # 1. Copy the URL printed to the terminal
 # 2. Open it in your browser
