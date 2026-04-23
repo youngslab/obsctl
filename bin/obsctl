@@ -280,6 +280,7 @@ do_setup() {
   "container": "$CONTAINER",
   "user": "$OBSIDIAN_USER",
   "projectDir": "$compose_dir",
+  "strategy": "Vault Strategy.md",
   "onedrive": {
     "syncInterval": 600,
     "skipDotFiles": true,
@@ -313,6 +314,50 @@ CONF
 
     echo ""
     echo "Setup complete! Try: obsctl vault"
+}
+
+do_install() {
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    local commands_dir="$script_dir/commands"
+    local target_dir="$HOME/.claude/commands"
+
+    if [[ ! -d "$commands_dir" ]]; then
+        echo "Error: commands directory not found at $commands_dir" >&2
+        exit 1
+    fi
+
+    mkdir -p "$target_dir"
+
+    local count=0
+    for cmd_file in "$commands_dir"/*.md; do
+        [[ -f "$cmd_file" ]] || continue
+        local name
+        name=$(basename "$cmd_file")
+        cp "$cmd_file" "$target_dir/$name"
+        echo "  ✓ Installed: /$name → $target_dir/$name"
+        count=$((count + 1))
+    done
+
+    if [[ $count -eq 0 ]]; then
+        echo "No commands found to install."
+    else
+        echo "  $count command(s) installed. Use /<name> in Claude Code."
+    fi
+}
+
+do_strategy() {
+    local strategy_file=""
+    if [[ -f "$CONFIG_FILE" ]]; then
+        strategy_file=$(grep -o '"strategy"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*: *"//;s/"//')
+    fi
+    if [[ -z "$strategy_file" ]]; then
+        echo "Error: No strategy file configured." >&2
+        echo "Set \"strategy\" in $CONFIG_FILE or run 'obsctl setup'." >&2
+        exit 1
+    fi
+    check_container
+    exec_obsidian read file="$strategy_file"
 }
 
 do_status() {
@@ -357,6 +402,8 @@ Usage: obsctl <command> [args...]
 
 Commands:
   setup                 Configure Docker, OneDrive, and vault
+  strategy              Show vault strategy document
+  install               Install Claude Code skills to ~/.claude/commands/
   status                Show environment health
   vault                 Vault info
   read <note>           Read a note (path or wikilink name)
@@ -398,9 +445,11 @@ fi
 
 # Handle built-in commands first
 case "$1" in
-    setup)  do_setup; exit $? ;;
-    status) do_status; exit $? ;;
-    help)   do_help; exit 0 ;;
+    setup)    do_setup; exit $? ;;
+    status)   do_status; exit $? ;;
+    strategy) do_strategy; exit $? ;;
+    install)  do_install; exit $? ;;
+    help)     do_help; exit 0 ;;
 esac
 
 # Expand shorthands (sets CMD, may set EXTRA_ARGS)
