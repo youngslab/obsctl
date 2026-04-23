@@ -472,5 +472,16 @@ for arg in "${args[@]}"; do
     fi
 done
 
+# Auto-add path= for create if not specified (prevent vault root creation)
+if [[ "$CMD" == "create" ]]; then
+    _has_path=false
+    for arg in "${resolved_args[@]}"; do
+        [[ "$arg" == path=* ]] && _has_path=true
+    done
+    if [[ "$_has_path" == false ]]; then
+        resolved_args+=("path=\"$VAULT_PREFIX\"")
+    fi
+fi
+
 # Execute
 eval exec_obsidian "$CMD" "${resolved_args[@]}"
