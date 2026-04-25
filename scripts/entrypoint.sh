@@ -56,11 +56,11 @@ if [ ! -f "$OBSIDIAN_JSON" ]; then
     echo "[init-config] Generating obsidian.json..."
     VAULT_ID=$(cat /proc/sys/kernel/random/uuid | tr -d '-' | head -c 16)
     TIMESTAMP=$(date +%s%3N)
-    VAULT_NAME=${VAULT_NAME:-MyVault}
 
+    # name matches the mount basename — obsidian-cli derives vault identity
+    # from the path basename and ignores this field
     jq -n \
         --arg vid "$VAULT_ID" \
-        --arg vname "$VAULT_NAME" \
         --arg vpath "/vault" \
         --argjson ts "$TIMESTAMP" \
         '{
@@ -70,7 +70,7 @@ if [ ! -f "$OBSIDIAN_JSON" ]; then
                     path: $vpath,
                     ts: $ts,
                     open: true,
-                    name: $vname
+                    name: "vault"
                 }
             }
         }' > "$OBSIDIAN_JSON"

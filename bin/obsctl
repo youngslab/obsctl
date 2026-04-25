@@ -198,7 +198,6 @@ do_setup() {
     if [[ ! -f "$compose_dir/.env" ]]; then
         echo "PUID=$(id -u)" > "$compose_dir/.env"
         echo "PGID=$(id -g)" >> "$compose_dir/.env"
-        echo "VAULT_NAME=MyVault" >> "$compose_dir/.env"
         echo "  ✓ Created .env (PUID=$(id -u), PGID=$(id -g))"
     else
         echo "  ✓ .env exists"
