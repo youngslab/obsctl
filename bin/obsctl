@@ -351,15 +351,44 @@ do_install() {
 do_strategy() {
     local strategy_file=""
     if [[ -f "$CONFIG_FILE" ]]; then
-        strategy_file=$(grep -o '"strategy"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*: *"//;s/"//')
+        # `|| true` so `set -e` doesn't exit when grep finds no match
+        strategy_file=$(grep -o '"strategy"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" 2>/dev/null | head -1 | sed 's/.*: *"//;s/"//' || true)
     fi
+
     if [[ -z "$strategy_file" ]]; then
-        echo "Error: No strategy file configured." >&2
-        echo "Set \"strategy\" in $CONFIG_FILE or run 'obsctl setup'." >&2
+        cat >&2 <<EOF
+Warning: No strategy document configured.
+
+  How to set up a vault strategy:
+    1. Create a markdown file in your vault that describes your conventions —
+       folder layout, note types, frontmatter rules, naming, etc.
+    2. Add it to obsctl config:
+         echo '{"strategy": "<filename>.md"}' merged into $CONFIG_FILE
+       Or re-run: obsctl setup
+    3. Use a stable name and keep it at a known path so the slash commands
+       can load it consistently across machines.
+
+  Slash commands will fall back to CLAUDE.md (Claude Code) or AGENTS.md (Codex)
+  at the vault root if no strategy is configured.
+EOF
         exit 1
     fi
+
     check_container
-    exec_obsidian read file="$strategy_file"
+    local content
+    content=$(exec_obsidian read file="$strategy_file" 2>/dev/null)
+    # obsidian-cli exits 0 even when missing — detect via "Error:" prefix
+    if [[ -z "$content" || "$content" == Error:* ]]; then
+        cat >&2 <<EOF
+Warning: Strategy file "$strategy_file" not found in vault.
+
+  - Verify the filename in $CONFIG_FILE under "strategy".
+  - Make sure the file exists in your vault (Obsidian indexes by name).
+  - Slash commands will fall back to CLAUDE.md / AGENTS.md at the vault root.
+EOF
+        exit 1
+    fi
+    printf '%s\n' "$content"
 }
 
 do_status() {

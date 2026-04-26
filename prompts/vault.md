@@ -16,7 +16,20 @@ obsctl을 통해 Obsidian vault의 노트를 관리합니다.
 obsctl strategy
 ```
 
-이 전략의 모든 규칙(영역 구분, 타입 체계, frontmatter 규칙, 작성 규칙)을 이후 작업에 적용합니다.
+성공하면 그 전략의 모든 규칙(영역 구분, 타입 체계, frontmatter 규칙, 작성 규칙)을 이후 작업에 적용합니다.
+
+**Fallback (strategy가 설정되지 않았거나 파일이 없을 때):**
+
+`obsctl strategy`가 비어 있거나 stderr에 warning을 출력하면, vault 루트의 `AGENTS.md`를 대신 읽어 운영 지침으로 사용합니다:
+
+```bash
+obsctl read AGENTS.md
+```
+
+`AGENTS.md`도 없으면 사용자에게 다음을 안내합니다:
+- vault에 전략 문서를 만들 것
+- `~/.config/obsctl/config.json`의 `"strategy"` 필드에 파일명 등록
+- 또는 vault 루트에 `AGENTS.md`를 둬서 fallback으로 사용
 
 ## Step 2: 사용자 요청 분석
 
