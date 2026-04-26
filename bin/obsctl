@@ -318,30 +318,33 @@ CONF
 do_install() {
     local script_dir
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-    local commands_dir="$script_dir/commands"
-    local target_dir="$HOME/.claude/commands"
 
-    if [[ ! -d "$commands_dir" ]]; then
-        echo "Error: commands directory not found at $commands_dir" >&2
-        exit 1
-    fi
+    INSTALL_COUNT=0
+    _install_dir() {
+        local src="$1" dst="$2" label="$3"
+        INSTALL_COUNT=0
+        [[ -d "$src" ]] || return 0
+        mkdir -p "$dst"
+        for f in "$src"/*.md; do
+            [[ -f "$f" ]] || continue
+            local name
+            name=$(basename "$f")
+            cp "$f" "$dst/$name"
+            echo "  ✓ $label: /$name → $dst/$name"
+            INSTALL_COUNT=$((INSTALL_COUNT + 1))
+        done
+    }
 
-    mkdir -p "$target_dir"
+    _install_dir "$script_dir/commands" "$HOME/.claude/commands" "Claude Code"
+    local claude_n=$INSTALL_COUNT
+    _install_dir "$script_dir/prompts" "$HOME/.codex/prompts" "Codex"
+    local codex_n=$INSTALL_COUNT
 
-    local count=0
-    for cmd_file in "$commands_dir"/*.md; do
-        [[ -f "$cmd_file" ]] || continue
-        local name
-        name=$(basename "$cmd_file")
-        cp "$cmd_file" "$target_dir/$name"
-        echo "  ✓ Installed: /$name → $target_dir/$name"
-        count=$((count + 1))
-    done
-
-    if [[ $count -eq 0 ]]; then
+    local total=$((claude_n + codex_n))
+    if [[ $total -eq 0 ]]; then
         echo "No commands found to install."
     else
-        echo "  $count command(s) installed. Use /<name> in Claude Code."
+        echo "  Installed $claude_n Claude Code command(s), $codex_n Codex prompt(s)."
     fi
 }
 
@@ -402,7 +405,7 @@ Usage: obsctl <command> [args...]
 Commands:
   setup                 Configure Docker, OneDrive, and vault
   strategy              Show vault strategy document
-  install               Install Claude Code skills to ~/.claude/commands/
+  install               Install Claude Code commands and Codex prompts
   status                Show environment health
   vault                 Vault info
   read <note>           Read a note (path or wikilink name)
