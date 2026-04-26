@@ -22,7 +22,6 @@ mkdir -p vault onedrive-conf
 # 4. Configure environment (auto-detect host UID/GID)
 echo "PUID=$(id -u)" > .env
 echo "PGID=$(id -g)" >> .env
-echo "VAULT_NAME=MyVault" >> .env
 
 # 5. Build and start
 docker compose up -d
@@ -75,7 +74,6 @@ After authentication, the `refresh_token` file is automatically saved and reused
 |----------|---------|-------------|
 | `PUID` | `1000` | User ID for the obsidian user |
 | `PGID` | `1000` | Group ID for the obsidian group |
-| `VAULT_NAME` | `MyVault` | Name for the Obsidian vault |
 | `ONEDRIVE_AUTHRESPONSE` | _(empty)_ | OneDrive auth URI (first-time only) |
 
 ### Volume Mounts
@@ -231,9 +229,9 @@ docker exec obsctl /package/admin/s6-2.13.1.0/command/s6-svc -r /run/service/svc
 
 **Important:** The underlying `docker exec` must use `-u obsidian`. Running as root connects to a different IPC socket and fails. The `obsctl` wrapper handles this automatically.
 
-## Using with Claude Code
+## Using with Claude Code and Codex
 
-Open Claude Code in the project directory. Claude can use `obsctl` directly:
+Open Claude Code or Codex in the project directory. Both can use `obsctl` directly:
 
 ```bash
 obsctl read "My Note"
@@ -242,6 +240,20 @@ obsctl ls projects/
 ```
 
 The container also places a `CLAUDE.md` at the vault root with CLI documentation.
+
+### Slash Commands / Prompts
+
+`obsctl` ships strategy-aware skills that wrap the CLI. Install them with:
+
+```bash
+obsctl install
+```
+
+This deploys:
+- `commands/*.md` → `~/.claude/commands/` (Claude Code slash commands)
+- `prompts/*.md`  → `~/.codex/prompts/` (Codex CLI prompts)
+
+Currently provides `/vault` — loads the vault strategy (via `obsctl strategy`) and then performs search/read/create according to the strategy's rules. Configure the strategy file path in `~/.config/obsctl/config.json` under `"strategy"`.
 
 ## Health Checks
 
@@ -267,7 +279,8 @@ docker compose exec obsctl s6-rc -a list
 The refresh_token auto-renews. If it expires:
 ```bash
 docker compose down
-docker compose run --rm obsctl onedrive --confdir=/onedrive-conf --auth-uri
+docker compose run --rm --entrypoint "" obsctl \
+    gosu obsidian onedrive --confdir=/onedrive-conf --synchronize --single-directory ''
 docker compose up -d
 ```
 
