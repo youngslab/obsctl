@@ -10,5 +10,10 @@
 monitor_interval = "600"
 
 # Skip dot-files and symlinks
-skip_dotfiles = "true"
+# NOTE: skip_dotfiles MUST stay false. When true, onedrive treats
+# Documents/Obsidian/.obsidian as excluded and deletes it from the
+# OneDrive cloud copy every sync cycle -- that deletion propagates to
+# every other host synced to this OneDrive account, wiping their local
+# .obsidian (plugins/themes/hotkeys) too.
+skip_dotfiles = "false"
 skip_symlinks = "true"
